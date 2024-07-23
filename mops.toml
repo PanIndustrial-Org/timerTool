@@ -1,7 +1,7 @@
 dev-dependencies = { }
 
 [dependencies]
-ovs-fixed = "https://github.com/icdevsorg/ovs-fixed#v0.1.1"
+ovs-fixed = "0.1.1"
 base = "0.11.1"
 stableheapbtreemap = "1.5.0"
 star = "0.1.1"
