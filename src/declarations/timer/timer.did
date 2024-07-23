@@ -1,0 +1,86 @@
+type TimerTool = 
+ service {
+   __timer_tool_init_: () -> ();
+   add_action: (nat, ActionRequest) ->
+    (record {
+       actionId: ActionId__1;
+       currentCounter: nat;
+       timerStats: Stats;
+     });
+   add_action_async: (nat, ActionRequest) ->
+    (record {
+       actionId: ActionId__1;
+       currentCounter: nat;
+       timerStats: Stats;
+     });
+   cancel_action: (nat) ->
+    (record {
+       currentCounter: nat;
+       result: opt nat;
+       timerStats: Stats;
+     });
+   get_counter: () -> (nat) query;
+   get_stats: () -> (Stats) query;
+   hello: () -> (nat) query;
+   hello_world: () -> (text);
+   incremote: (nat) -> ();
+   trap: () -> ();
+   update_collector: (text) -> ();
+   update_max_executions: (nat) -> ();
+ };
+type TimerId = nat;
+type Time = nat;
+type Stats = 
+ record {
+   cycles: nat;
+   expectedExecutionTime: opt Time;
+   lastExecutionTime: Time;
+   maxExecutions: nat;
+   minAction: opt ActionDetail;
+   nextActionId: nat;
+   nextTimer: opt TimerId;
+   timers: nat;
+ };
+type Args = 
+ opt
+  record {
+    expectedExecutionTime: Time;
+    initialTimers: vec record {
+                         ActionId;
+                         Action;
+                       };
+    lastActionIdReported: opt nat;
+    lastCycleReport: opt nat;
+    lastExecutionTime: Time;
+    maxExecutions: opt nat;
+    nextActionId: nat;
+    nextCycleActionId: opt nat;
+  };
+type ActionRequest = 
+ record {
+   actionType: text;
+   params: blob;
+ };
+type ActionId__1 = 
+ record {
+   id: nat;
+   time: Time;
+ };
+type ActionId = 
+ record {
+   id: nat;
+   time: Time;
+ };
+type ActionDetail = 
+ record {
+   ActionId;
+   Action;
+ };
+type Action = 
+ record {
+   aSync: opt nat;
+   actionType: text;
+   params: blob;
+   retries: nat;
+ };
+service : (Args) -> TimerTool
