@@ -9,7 +9,7 @@ map = "9.0.1"
 
 
 [package]
-name = "timerTool"
+name = "timer-tool"
 version = "0.0.1"
 description = "manage and recover timers in motoko"
 repository = "https://github.com/PanIndustrial-Org/timerTool"
