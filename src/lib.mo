@@ -181,7 +181,7 @@ module {
           case(null){};
         };
 
-        let result = setActionSync<system>(get_time(), ({actionType = "icrc85:ovs:shareaction:timertool"; params = Blob.fromArray([]);}));
+        let result = setActionSync<system>(get_time() + (OneDay * 30), ({actionType = "icrc85:ovs:shareaction:timertool"; params = Blob.fromArray([]);}));
         state.nextCycleActionId := ?result.id;
       };
 
@@ -216,7 +216,7 @@ module {
           await* ovsfixed.shareCycles<system>({
             environment = do?{environment.advanced!.icrc85!};
             namespace = "com.panindustrial.libraries.timertool";
-            actions = 1;
+            actions = actions;
             schedule = func <system>(period: Nat) : async* (){
               let result = setActionSync<system>(get_time() + period, {actionType = "icrc85:ovs:shareaction:timertool"; params = Blob.fromArray([]);});
               state.nextCycleActionId := ?result.id;

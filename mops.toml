@@ -12,7 +12,7 @@ fuzz = "0.2.1"
 
 [package]
 name = "timer-tool"
-version = "0.0.1"
+version = "0.0.2"
 description = "manage and recover timers in motoko"
 repository = "https://github.com/PanIndustrial-Org/timerTool"
 keywords = [ "timers" ]

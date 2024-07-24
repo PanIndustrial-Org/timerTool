@@ -29,7 +29,7 @@ To initialize the Timer Tool, you need to create an instance of the `TimerTool` 
 
 stable let timerState = TT.init(TT.initialState(),#v0_1_0(#id), args, deployer.caller);
 
-let timerTool = Timer.TimerTool(timerState, Principal.fromText("your-canister-principal"), { advanced = null; reportExecution = null; reportError = null });
+let timerTool = TimerTool(timerState, Principal.fromText("your-canister-principal"), { advanced = null; reportExecution = null; reportError = null });
 ```
 
 #### Available Arguments
@@ -112,12 +112,14 @@ Register execution listeners to handle specific types of actions. This lets you 
 
 ```motoko
 
-public func handleTransfer(actionId: ActionId, action: Action): ActionId{
+private func handleTransfer(actionId: ActionId, action: Action): ActionId {
 
   //retrieve expected type from candid
   
-  let candidParsed :?Value  = from_candid(action.params);
-  let ?mapArray = candidParsed else D.trap("nat a valid icrc3 block");
+  let candidParsed : ?(Value, Nat)  = from_candid(action.params);
+  let ?tupleVal = candidParsed else D.trap("unexpected type");
+  let ?mapArray = tupleVal.0 else D.trap("not a valid icrc3 block");
+  //todo: validate block with ledger
   let #Array(toArray) = getMapValue(mapArray, "to");
   let #Blob(to) = toArray[0];
 
@@ -127,12 +129,16 @@ public func handleTransfer(actionId: ActionId, action: Action): ActionId{
   actionId;
 };
 
-timerTool.registerExecutionListenerSync(?"icrc1Transfer", handler);
+timerTool.registerExecutionListenerSync(?"icrc1Transfer", handleTransfer);
 
-let actionId = timerTool.setActionSync<system>(Time.now(), {
-  actionType = "icrc1Transfer";
-  params = toCandid(transferArgs);
-});
+public shared func notify_of_transfer(transferArgs: ICRC3.Value, index: Nat) : () {
+  
+  //delay processing for 5 minutes
+  let actionId = timerTool.setActionSync<system>(Time.now() + (ONE_MINUTE * 5), {
+    actionType = "icrc1Transfer";
+    params = toCandid((transferArgs, index));
+  });
+};
 
 ```
 
@@ -161,6 +167,51 @@ Return the new time in Nanoseconds UTC you would like the item scheduled at. If 
 ### Notification of completion
 
 To be notified when an item has been executed, register a `reportExecution` on your environment configuration.  This action will be called when the action has been successfully processed. No data on the execution is provided, so if you need to respond to the action, you'll need to associate the result/important info in your handler and then look it up by id.
+
+#### Recurring timers
+
+Recurring timers can be implemented by using the reportExecution handler:
+
+```
+stable let timerState = TT.init(TT.initialState(),#v0_1_0(#id), args, deployer.caller);
+
+let timerTool = TimerTool(timerState, Principal.fromText("your-canister-principal"), { 
+  advanced = null; 
+  reportExecution = ?handleRecurringTimers; 
+  reportError = ?handleRecurringErrors
+});
+
+private func handleRecurringTimers(report : TimerTool.ExecutionReqport) : Bool{
+
+  if(report.action.namespace == "com.myevent.recurring"){
+    let actionId = timerTool.setActionSync<system>(Time.now() + (ONE_MINUTE * 5), {
+    actionType = "com.myevent.recurring";
+    params = Blob.fromArray([]);
+  });
+  };
+};
+
+private func handleRecurringErrors(report : TimerTool.ErrorReport) : Bool {
+
+  if(report.action.namespace == "com.myevent.recurring"){
+    let actionId = timerTool.setActionSync<system>(Time.now() + (ONE_MINUTE * 5), {
+    actionType = "com.myevent.recurring";
+    params = Blob.fromArray([]);
+  });
+};
+  
+};
+
+
+private func handleEvent(actionId: ActionId, action: Action): ActionId {
+
+  //event code
+};
+
+timerTool.registerExecutionListenerSync(?"com.myevent.recurring", handleEvent);
+
+
+```
 
 ## Testing
 
