@@ -11,7 +11,7 @@ The Timer Tool library provides an API for scheduling timer events with argument
 
 ## Installation
 
-`mops install timerTool`
+`mops install timer-tool`
 
 Include the Timer Tool in your Motoko project by importing the necessary modules:
 
