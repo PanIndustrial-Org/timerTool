@@ -56,6 +56,8 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
       advanced = null;
       reportExecution = ?reportExecution;
       reportError = ?reportError;
+      syncUnsafe = null;
+      reportBatch = null;
     };
   };
 

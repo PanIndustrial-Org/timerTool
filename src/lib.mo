@@ -14,7 +14,8 @@ import Nat "mo:base/Nat";
 import Principal "mo:base/Principal";
 import Migration "./migrations";
 import MigrationTypes "./migrations/types";
-import ovsfixed "mo:ovs-fixed";
+import ovs_fixed "mo:ovs-fixed";
+
 
 module {
 
@@ -213,7 +214,7 @@ module {
         };
 
         try{
-          await* ovsfixed.shareCycles<system>({
+          await* ovs_fixed.shareCycles<system>({
             environment = do?{environment.advanced!.icrc85!};
             namespace = "com.panindustrial.libraries.timertool";
             actions = actions;
@@ -307,7 +308,7 @@ module {
 
         debug if (debug_channel.announce) D.print("actionsToExecute" # debug_show(Iter.toArray(actionsToExecute.results.vals())));
 
-        
+        let processed = Buffer.Buffer<(ActionId,Action)>(actionsToExecute.results.size());
 
         label proc for(thisAction in actionsToExecute.results.vals()){
           debug if (debug_channel.announce) D.print("thisAction" # debug_show(thisAction));
@@ -324,10 +325,10 @@ module {
 
           debug if (debug_channel.announce) D.print("have execution handler" # debug_show(thisAction));
 
-
           if(thisAction.1.actionType == "icrc85:ovs:shareaction:timertool"){
             ignore shareCycles2<system>();
             removeAction(thisAction.0);
+            processed.add(thisAction);
             continue proc;
           };
 
@@ -335,13 +336,13 @@ module {
             case(#Sync(handler)){
 
               debug if (debug_channel.announce) D.print("found a sync handler" # debug_show(thisAction));
-
-
               //this is a synchronous action
               //we will execute it and remove it from the tree
-
-              let safetyTimer = Timer.setTimer<system>(#nanoseconds(0), safetyCheck);
-              await commitpoint();
+              let safetyTimer = if(environment.syncUnsafe == null or environment.syncUnsafe == ?false){
+                let safetyTimerResult = Timer.setTimer<system>(#nanoseconds(0), safetyCheck);
+                await commitpoint();
+                ?safetyTimerResult;
+              } else null;
 
 
               let result = handler<system>(thisAction.0, thisAction.1);
@@ -353,18 +354,20 @@ module {
               state.lastExecutionTime := Int.abs(get_time());
 
               debug if (debug_channel.announce) D.print("done executing sync action");
-              Timer.cancelTimer(safetyTimer);
-
-              await commitpoint();
-
+              switch(safetyTimer){
+                case(?val) {
+                  Timer.cancelTimer(val);
+                  await commitpoint();
+                };
+                case(null) {};
+              };
               switch(environment.reportExecution){
                 case(?val) {
                   ignore val({action = thisAction; awaited = false})
                 };
                 case(null) {};
               };
-
-
+              processed.add(thisAction);
             };
             case(#Async(handler)){
 
@@ -483,11 +486,20 @@ module {
                   case(null) {};
                 };
               };
+              processed.add(thisAction);
             };
+            
           };
         };
 
         debug if (debug_channel.announce) D.print("done executing actions");
+
+        switch(environment.reportBatch){
+          case(?val) {
+            await* val(Buffer.toArray(processed));
+          };
+          case(null) {};
+        };
 
         state.lastExecutionTime := get_time();
         state.timerLock := null;

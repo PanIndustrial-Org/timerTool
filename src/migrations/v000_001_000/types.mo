@@ -105,8 +105,10 @@ module {
         collector: ?Principal;
       };
     };
+    syncUnsafe : ?Bool;
     reportExecution : ?((ExecutionReport) -> Bool);
     reportError : ?((ErrorReport) -> ?Nat);
+    reportBatch : ?((itemsProcessed : [(ActionId, Action)]) -> async* ());
   };
 
   public type State = {
