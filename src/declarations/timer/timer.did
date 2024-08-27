@@ -20,6 +20,7 @@ type TimerTool =
        timerStats: Stats;
      });
    get_counter: () -> (nat) query;
+   get_lastActionIdReported: () -> (opt nat) query;
    get_stats: () -> (Stats) query;
    hello: () -> (nat) query;
    hello_world: () -> (text);

@@ -213,6 +213,8 @@ module {
           if(cyclesToShare > 100_000_000_000_000) cyclesToShare := 100_000_000_000_000;
         };
 
+        debug if (debug_channel.cycles) D.print("should share cycles" # debug_show(cyclesToShare));
+
         try{
           await* ovs_fixed.shareCycles<system>({
             environment = do?{environment.advanced!.icrc85!};
@@ -222,7 +224,7 @@ module {
               let result = setActionSync<system>(get_time() + period, {actionType = "icrc85:ovs:shareaction:timertool"; params = Blob.fromArray([]);});
               state.nextCycleActionId := ?result.id;
             };
-            cycles = Cycles.balance();
+            cycles = cyclesToShare;
           });
         } catch(e){
           debug if (debug_channel.cycles) D.print("error sharing cycles" # Error.message(e));
