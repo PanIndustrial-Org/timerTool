@@ -28,6 +28,12 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
     return qTimerTool().getStats();
   };
 
+  public query func get_lastActionIdReported<system>() : async ?Nat {
+    return qTimerTool().getState().lastActionIdReported;
+  };
+
+  
+
   public query func get_counter<system>() : async Nat {
     return currentCount;
   };
@@ -56,6 +62,8 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
       advanced = null;
       reportExecution = ?reportExecution;
       reportError = ?reportError;
+      syncUnsafe = null;
+      reportBatch = null;
     };
   };
 

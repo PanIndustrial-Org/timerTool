@@ -79,7 +79,6 @@ module {
     #Int : Int;
     #Map : Map;
     #Nat : Nat;
-    #Nat64 : Nat64;
     #Blob : Blob;
     #Text : Text;
     #Array : [Value];
@@ -105,8 +104,10 @@ module {
         collector: ?Principal;
       };
     };
+    syncUnsafe : ?Bool;
     reportExecution : ?((ExecutionReport) -> Bool);
     reportError : ?((ErrorReport) -> ?Nat);
+    reportBatch : ?((itemsProcessed : [(ActionId, Action)]) -> async* ());
   };
 
   public type State = {

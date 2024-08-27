@@ -933,11 +933,22 @@ it('cycle share is processed correctly', async () => {
 
   console.log("advancing one day");
 
-  let firstDay =  currentTime + OneDay + OneMinute; 
+  let firstDay =  currentTime + (OneDay*1n) + OneMinute;
+  let thirtyFirstDay =  currentTime + (OneDay*31n) + OneMinute; 
 
   console.log("setting first Day");
 
   await pic.setTime(Number(firstDay/1000000n)); // advance to just past first day times
+  await pic.tick(); // process the next tick to trigger actions
+  await pic.tick();
+
+  const stats0 = await timer_fixture.actor.get_stats();
+  console.log("Cycles1", stats0.cycles);
+
+  const id1 = await timer_fixture.actor.get_lastActionIdReported();
+  console.log("actionid1", id1);
+
+  await pic.setTime(Number(thirtyFirstDay/1000000n)); // advance to just past first day times
   await pic.tick(); // process the next tick to trigger actions
   await pic.tick();
 
@@ -948,11 +959,14 @@ it('cycle share is processed correctly', async () => {
   expect(stats.timers).toBe(BigInt(1)); // One action remains unprocessed because of maxExecutions
   expect(stats.nextActionId).toBe(BigInt(2));
 
+  const id2 = await timer_fixture.actor.get_lastActionIdReported();
+  console.log("id2", id2);
+
 
   // You would probably need to re-initialize or confirm state if needed here, not always necessary
   await pic.tick(); // Advance to trigger any instant side-effects post-upgrade
 
-  let aMonthLater =  currentTime + (OneDay * 31n) + OneMinute;
+  let aMonthLater =  currentTime + (OneDay * 31n) + (OneDay * 31n) + OneMinute;
   
   console.log("moving a month in the future");
 
@@ -963,6 +977,9 @@ it('cycle share is processed correctly', async () => {
   const stats2 = await timer_fixture.actor.get_stats();
 
   console.log("after stats 2", stats2);
+
+  const id3 = await timer_fixture.actor.get_lastActionIdReported();
+  console.log("id3", id3);
 
   expect(stats2.timers).toBe(BigInt(1)); // One action remains unprocessed because of maxExecutions
   expect(stats2.nextActionId).toBe(BigInt(3));
@@ -975,7 +992,7 @@ it('cycle share is processed correctly', async () => {
     wasm: sub_WASM_PATH,
     arg: IDL.encode(timerInit({IDL}), [[]]) });
 
-  let afterUpgrade =  currentTime + (OneDay * 31n) + OneMinute + OneDay + OneMinute;
+  let afterUpgrade =  currentTime + (OneDay * 31n) + (OneDay * 31n) + OneMinute + OneDay + OneMinute;
 
   await pic.tick();
   await pic.tick();
@@ -993,11 +1010,11 @@ it('cycle share is processed correctly', async () => {
 
   console.log("after stats 3", stats3);
 
+  const id4 = await timer_fixture.actor.get_lastActionIdReported();
+  console.log("id4", id4);
+
   expect(stats3.timers).toBe(BigInt(1)); // One action remains unprocessed because of maxExecutions
   expect(stats3.nextActionId).toBe(BigInt(3));
-
-
-  
 
 });
 

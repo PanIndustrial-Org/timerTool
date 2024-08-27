@@ -66,6 +66,7 @@ export interface TimerTool {
     }
   >,
   'get_counter' : ActorMethod<[], bigint>,
+  'get_lastActionIdReported' : ActorMethod<[], [] | [bigint]>,
   'get_stats' : ActorMethod<[], Stats>,
   'hello' : ActorMethod<[], bigint>,
   'hello_world' : ActorMethod<[], string>,

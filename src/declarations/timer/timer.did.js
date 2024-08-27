@@ -72,6 +72,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'get_counter' : IDL.Func([], [IDL.Nat], ['query']),
+    'get_lastActionIdReported' : IDL.Func([], [IDL.Opt(IDL.Nat)], ['query']),
     'get_stats' : IDL.Func([], [Stats], ['query']),
     'hello' : IDL.Func([], [IDL.Nat], ['query']),
     'hello_world' : IDL.Func([], [IDL.Text], []),
