@@ -6,7 +6,7 @@ import D "mo:base/Debug";
 
 module {
 
-  public func upgrade(prevmigration_state: MigrationTypes.State, args: MigrationTypes.Args, caller: Principal): MigrationTypes.State {
+  public func upgrade(prevmigration_state: MigrationTypes.State, args: MigrationTypes.Args, caller: Principal, canister : Principal): MigrationTypes.State {
 
     D.print("in upgrade " # debug_show(args));
 

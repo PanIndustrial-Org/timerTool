@@ -29,25 +29,45 @@ module {
     prevState: MigrationTypes.State, 
     nextState: MigrationTypes.State, 
     args: MigrationTypes.Args,
-    caller: Principal
+    caller: Principal,
+    canister: Principal
   ): MigrationTypes.State {
 
-   // debug if (debug_channel.announce) D.print("in migrate" # debug_show(prevState));
+   
     var state = prevState;
+     
     var migrationId = getMigrationId(prevState);
-    debug if (debug_channel.announce) D.print("getting migration id");
     let nextMigrationId = getMigrationId(nextState);
-    debug if (debug_channel.announce) D.print(debug_show(nextMigrationId));
 
-    while (nextMigrationId > migrationId) {
-      debug if (debug_channel.announce) D.print("in upgrade while" # debug_show((nextMigrationId, migrationId)));
-      let migrate = upgrades[migrationId];
-      debug if (debug_channel.announce) D.print("upgrade should have run");
-      migrationId := if (nextMigrationId > migrationId) migrationId + 1 else migrationId - 1;
+    while (migrationId < nextMigrationId) {
+      let migrate =  upgrades[migrationId];
+      migrationId := migrationId + 1;
 
-      state := migrate(state, args, caller);
+      state := migrate(state, args, caller, canister);
     };
 
     return state;
+  };
+
+  public let migration = {
+    initialState = #v0_0_0(#data);
+    //update your current state version
+    currentStateVersion = #v0_0_1(#id);
+    getMigrationId = getMigrationId;
+    migrate = migrate;
+  };
+
+  public type Migration<T,A> = {
+    initialState: T;
+    currentStateVersion: T;
+    getMigrationId: (T) -> Nat;
+    migrate: (T,T,A,Principal, Principal) -> T;
+  };
+
+  public func runMigration<T,A>(stored : ?T, args: A, owner: Principal, canister: Principal, migration : Migration<T,A>) : T {
+    switch (stored) {
+      case(null) (migration.migrate(migration.initialState, migration.currentStateVersion, args, owner, canister) : T);
+      case(?val) (migration.migrate(val, migration.currentStateVersion, args, owner, canister) : T);
+    };
   };
 };

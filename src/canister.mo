@@ -6,6 +6,7 @@ import Timer "mo:base/Timer";
 import Text "mo:base/Text";
 import Star "mo:star/star";
 import TT "lib";
+import ClassPlusLib "../../../../ICDevs/projects/ClassPlus/src/";
 
 shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
 
@@ -25,11 +26,11 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
   };
 
   public query func get_stats<system>() : async TT.Stats {
-    return qTimerTool().getStats();
+    return timerTool().getStats();
   };
 
   public query func get_lastActionIdReported<system>() : async ?Nat {
-    return qTimerTool().getState().lastActionIdReported;
+    return timerTool().getState().lastActionIdReported;
   };
 
   
@@ -39,7 +40,7 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
   };
 
   stable var currentCount = 0 : Nat;
-  stable let timerState = TT.init(TT.initialState(),#v0_1_0(#id), args, deployer.caller);
+  //stable let timerState = TT.init(TT.initialState(),#v0_1_0(#id), args, deployer.caller);
 
   //D.print("base state " # debug_show(timerState));
 
@@ -56,41 +57,61 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
     };
   };
 
-
-  private func getEnvironment() : TT.Environment{
-    {      
-      advanced = null;
-      reportExecution = ?reportExecution;
-      reportError = ?reportError;
-      syncUnsafe = null;
-      reportBatch = null;
-    };
+  private func reportExecution(execInfo: TT.ExecutionReport): Bool{
+      return false;
   };
 
-  var timerTool_ : ?TT.TimerTool = null;
+  private func reportError(errInfo: TT.ErrorReport) : ?Nat{
+    D.print("in report error" # debug_show(errInfo));
+    if(errInfo.action.1.actionType == "delay.1.minuteasync"){
+      D.print("in report error");
+      return ?(Int.abs(Time.now()) + OneMinute);
+    };
 
-  private func timerTool<system>() : TT.TimerTool{
-    switch(timerTool_){
-      case(null){
-        let x = TT.TimerTool(?timerState, getCanister(), getEnvironment());
-        timerTool_ := ?x;
-        x;
+    if(errInfo.action.1.actionType == "delay.1.minute"){
+      D.print("in report error sync");
+      return ?(Int.abs(Time.now()) + OneMinute);
+    };
+
+    if(errInfo.action.1.actionType == "trapfor10async"){
+      D.print("in report error trapfor10async");
+      return null; //on purpose
+    };
+    return null;
+  };
+
+  let initManager = ClassPlusLib.ClassPlusInitializationManager(deployer.caller, Principal.fromActor(this));
+
+  stable var tt_migration_state : TT.State = TT.Migration.migration.initialState;
+
+   D.print("about to call init");
+  let timerTool = TT.Init<system>({
+    manager = initManager;
+    initialState = tt_migration_state;
+    args = args;
+    pullEnvironment = ?(func() : TT.Environment {
+      D.print("pulling environment");
+      {      
+        advanced = null;
+        reportExecution = ?reportExecution;
+        reportError = ?reportError;
+        syncUnsafe = null;
+        reportBatch = null;
       };
-      case(?val) val;
-    };
-  };
+    });
+    onInitialize = ?(func (newClass: TT.TimerTool) : async* () {
+      D.print("Initializing TimerTool");
+      newClass.initialize<system>();
+      //do any work here necessary for initialization
+    });
+    onStorageChange = func(state: TT.State) {
+      tt_migration_state := state;
+    }
+  });
 
-  private func qTimerTool() : TT.TimerTool{
-    switch(timerTool_){
-      case(null){
-       D.trap("timer tool not init");
-      };
-      case(?val) val;
-    };
-  };
 
   private func getState() : TT.CurrentState {
-    let #v0_1_0(#data(val)) = timerState else D.trap("state not init");
+    let #v0_1_0(#data(val)) = tt_migration_state else D.trap("state not init");
     val;
   };
 
@@ -239,28 +260,7 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
   };
 
 
-  private func reportExecution(execInfo: TT.ExecutionReport): Bool{
-      return false;
-  };
-
-  private func reportError(errInfo: TT.ErrorReport) : ?Nat{
-    D.print("in report error" # debug_show(errInfo));
-    if(errInfo.action.1.actionType == "delay.1.minuteasync"){
-      D.print("in report error");
-      return ?(Int.abs(Time.now()) + OneMinute);
-    };
-
-    if(errInfo.action.1.actionType == "delay.1.minute"){
-      D.print("in report error sync");
-      return ?(Int.abs(Time.now()) + OneMinute);
-    };
-
-    if(errInfo.action.1.actionType == "trapfor10async"){
-      D.print("in report error trapfor10async");
-      return null; //on purpose
-    };
-    return null;
-  };
+  
 
   public shared func add_action(time: Nat, action: TT.ActionRequest) : async {
     actionId: TT.ActionId;
@@ -268,11 +268,11 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
     currentCounter: Nat;
   } {
     
-    let result = timerTool<system>().setActionSync<system>(time, action);
+    let result = timerTool().setActionSync<system>(time, action);
 
     {
       actionId = result;
-      timerStats = qTimerTool().getStats();
+      timerStats = timerTool().getStats();
       currentCounter = currentCount;
     };
   };
@@ -283,11 +283,11 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
     currentCounter: Nat;
   } {
     
-    let result = timerTool<system>().setActionASync<system>(time, action, OneMinute);
+    let result = timerTool().setActionASync<system>(time, action, OneMinute);
 
     {
       actionId = result;
-      timerStats = qTimerTool().getStats();
+      timerStats = timerTool().getStats();
       currentCounter = currentCount;
     };
   };
@@ -298,18 +298,18 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
     currentCounter: Nat;
   } {
     
-    let result = timerTool<system>().cancelAction<system>(id);
+    let result = timerTool().cancelAction<system>(id);
 
     {
       result = result;
-      timerStats = qTimerTool().getStats();
+      timerStats = timerTool().getStats();
       currentCounter = currentCount;
     };
   };
 
   public shared func update_max_executions(amt: Nat) : async () {
     
-    let state = timerTool<system>().getState();
+    let state = timerTool().getState();
 
     state.maxExecutions := amt;
 
@@ -317,20 +317,20 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
   };
 
   public shared func update_collector(req: Text) : async () {
-    timerTool<system>().setCollector(req);
+    timerTool().setCollector(req);
     return;
   };
 
   public shared(msg) func __timer_tool_init__() : async () {
     assert(msg.caller == Principal.fromActor(this));
-    ignore timerTool<system>();
-    timerTool<system>().registerExecutionListenerAsync(?"incasync", handleTimerASync : TT.ExecutionAsyncHandler);
-    timerTool<system>().registerExecutionListenerAsync(?"trapfor10async", handleTimerASync : TT.ExecutionAsyncHandler);
-    timerTool<system>().registerExecutionListenerAsync(?"delay.1.minuteasync", handleTimerASync : TT.ExecutionAsyncHandler);
-    timerTool<system>().registerExecutionListenerSync(null, handleTimer);
-    timerTool<system>().registerExecutionListenerSync(?"specific", handleTimerSpecific);
-    timerTool<system>().registerExecutionListenerAsync(?"specificasync", handleTimerASyncSpecific);
-    timerTool<system>().initialize<system>();
+    ignore timerTool();
+    timerTool().registerExecutionListenerAsync(?"incasync", handleTimerASync : TT.ExecutionAsyncHandler);
+    timerTool().registerExecutionListenerAsync(?"trapfor10async", handleTimerASync : TT.ExecutionAsyncHandler);
+    timerTool().registerExecutionListenerAsync(?"delay.1.minuteasync", handleTimerASync : TT.ExecutionAsyncHandler);
+    timerTool().registerExecutionListenerSync(null, handleTimer);
+    timerTool().registerExecutionListenerSync(?"specific", handleTimerSpecific);
+    timerTool().registerExecutionListenerAsync(?"specificasync", handleTimerASyncSpecific);
+    timerTool().initialize<system>();
   };
 
 
@@ -342,17 +342,17 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
     ignore initActor.__timer_tool_init__();
   };
 
-  ignore Timer.setTimer(#nanoseconds(0), init);
+  ignore Timer.setTimer<system>(#nanoseconds(0), init);
 
   system func postupgrade(){
-    timerTool<system>().registerExecutionListenerAsync(?"incasync", handleTimerASync : TT.ExecutionAsyncHandler);
-    timerTool<system>().registerExecutionListenerAsync(?"trapfor10async", handleTimerASync : TT.ExecutionAsyncHandler);
-    timerTool<system>().registerExecutionListenerAsync(?"delay.1.minuteasync", handleTimerASync : TT.ExecutionAsyncHandler);
-    timerTool<system>().registerExecutionListenerSync(null, handleTimer);
-    timerTool<system>().registerExecutionListenerSync(?"specific", handleTimerSpecific);
+    timerTool().registerExecutionListenerAsync(?"incasync", handleTimerASync : TT.ExecutionAsyncHandler);
+    timerTool().registerExecutionListenerAsync(?"trapfor10async", handleTimerASync : TT.ExecutionAsyncHandler);
+    timerTool().registerExecutionListenerAsync(?"delay.1.minuteasync", handleTimerASync : TT.ExecutionAsyncHandler);
+    timerTool().registerExecutionListenerSync(null, handleTimer);
+    timerTool().registerExecutionListenerSync(?"specific", handleTimerSpecific);
 
-    timerTool<system>().registerExecutionListenerAsync(?"specificasync", handleTimerASyncSpecific);
-    timerTool<system>().initialize<system>();
+    timerTool().registerExecutionListenerAsync(?"specificasync", handleTimerASyncSpecific);
+    timerTool().initialize<system>();
 
   }; 
 

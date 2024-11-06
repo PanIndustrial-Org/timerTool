@@ -67,7 +67,7 @@ const OneDay = BigInt(86400000000000); // 24 hours in NanoSeconds
 const OneMinute = BigInt(60000000000); // 1 minute in Nanoseconds
 
 const base64ToUInt8Array = (base64String: string): Uint8Array => {
-  return Buffer.from(base64String, 'base64');
+  return Uint8Array.from(Buffer.from(base64String, 'base64'));
 };
 
 const minterPublicKey = 'Uu8wv55BKmk9ZErr6OIt5XR1kpEGXcOSOC1OYzrAwuk=';
@@ -293,7 +293,7 @@ it(`initializes with provided state`, async () => {
   // We define what the expected state should look like
   const expectedState = {
     timers: BigInt(2), // as per our input
-    nextTimer: [BigInt(2)], // as per our input, assuming encoding matches the type from the Timer service
+    nextTimer: [BigInt(3)], // as per our input, assuming encoding matches the type from the Timer service; class plus schedules one so increases from 2 to 3
     lastExecutionTime: BigInt(thisTime) + BigInt(2),
     expectedExecutionTime: [BigInt(thisTime) + BigInt(100000000000)],
     nextActionId: BigInt(4),
