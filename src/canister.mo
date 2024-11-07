@@ -80,7 +80,7 @@ shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
     return null;
   };
 
-  let initManager = ClassPlusLib.ClassPlusInitializationManager(deployer.caller, Principal.fromActor(this));
+  let initManager = ClassPlusLib.ClassPlusInitializationManager(deployer.caller, Principal.fromActor(this), true);
 
   stable var tt_migration_state : TT.State = TT.Migration.migration.initialState;
 
