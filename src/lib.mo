@@ -15,7 +15,7 @@ import Principal "mo:base/Principal";
 import MigrationLib "./migrations";
 import MigrationTypes "./migrations/types";
 import ovs_fixed "mo:ovs-fixed";
-import ClassPlusLib "../../../../ICDevs/projects/ClassPlus/src/";
+import ClassPlusLib "mo:class-plus";
 
 
 

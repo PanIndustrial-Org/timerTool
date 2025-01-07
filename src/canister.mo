@@ -6,7 +6,7 @@ import Timer "mo:base/Timer";
 import Text "mo:base/Text";
 import Star "mo:star/star";
 import TT "lib";
-import ClassPlusLib "../../../../ICDevs/projects/ClassPlus/src/";
+import ClassPlusLib "mo:class-plus";
 
 shared (deployer) actor class TimerTool<system>(args : TT.Args)  = this {
 

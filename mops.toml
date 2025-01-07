@@ -4,6 +4,7 @@ stableheapbtreemap = "1.5.0"
 star = "0.1.1"
 map = "9.0.1"
 ovs-fixed = "0.1.2"
+class-plus = "0.0.1"
 
 [dev-dependencies]
 test = "2.0.0"
@@ -11,7 +12,7 @@ fuzz = "0.2.1"
 
 [package]
 name = "timer-tool"
-version = "0.0.3"
+version = "0.1.0"
 description = "manage and recover timers in motoko"
 repository = "https://github.com/PanIndustrial-Org/timerTool"
 keywords = [ "timers" ]
