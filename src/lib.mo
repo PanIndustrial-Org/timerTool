@@ -21,12 +21,6 @@ import ClassPlusLib "../../../../ICDevs/projects/ClassPlus/src/";
 
 module {
 
-
-  public let debug_channel = {
-    announce = true;
-    cycles = true;
-  };
-
   public type TimerId =               MigrationTypes.Current.TimerId;
   public type Time =                  MigrationTypes.Current.Time;
   public type Action =                MigrationTypes.Current.Action;
@@ -111,6 +105,11 @@ module {
 
 
   public class TimerTool(stored: ?State, caller: Principal, canister: Principal, args: ?InitArgList, _environment: ?Environment, storageChanged: (State) -> ()){
+
+    public let debug_channel = {
+      var announce = true;
+      var cycles = true;
+    };
 
     D.print("TimerTool created by " # Principal.toText(caller) # " for canister " # Principal.toText(canister) # " with args " # debug_show(args) # " and environment " # debug_show(switch(_environment){ case(null) "null"; case(?val) "set";}));
 
