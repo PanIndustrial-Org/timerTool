@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     // enable latest features
-    "lib": ["ESNext"],
+    "lib": ["DOM", "DOM.Iterable","ESNext"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
@@ -9,9 +9,9 @@
     "types": ["jest", "node"],
 
     // Bundler mode
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "noEmit": true,
 
     // Best practices
@@ -23,7 +23,8 @@
 
     // Some stricter flags
     "useUnknownInCatchVariables": true,
-    "noPropertyAccessFromIndexSignature": true
+    "noPropertyAccessFromIndexSignature": true,
+    "jsx": "react-jsx"
   },
   "include": [
     "./src/**/*.ts",

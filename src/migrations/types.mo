@@ -8,7 +8,7 @@ module {
   // instead of importing it from migration folder itself
   public let Current = v0_1_0;
 
-  public type Args = ?{
+  public type ArgList = {
     initialTimers : [(v0_1_0.ActionId, v0_1_0.Action)];
     lastExecutionTime: v0_1_0.Time;
     expectedExecutionTime: v0_1_0.Time;
@@ -18,6 +18,8 @@ module {
     lastCycleReport: ?Nat;
     maxExecutions: ?Nat;
   };
+
+  public type Args = ?ArgList;
 
   public type State = {
     #v0_0_0: {#id; #data};

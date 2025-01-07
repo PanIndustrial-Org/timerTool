@@ -12,18 +12,14 @@ import Option "mo:base/Option";
 import Timer "mo:base/Timer";
 import Nat "mo:base/Nat";
 import Principal "mo:base/Principal";
-import Migration "./migrations";
+import MigrationLib "./migrations";
 import MigrationTypes "./migrations/types";
 import ovs_fixed "mo:ovs-fixed";
+import ClassPlusLib "mo:class-plus";
+
 
 
 module {
-
-
-  public let debug_channel = {
-    announce = false;
-    cycles = false;
-  };
 
   public type TimerId =               MigrationTypes.Current.TimerId;
   public type Time =                  MigrationTypes.Current.Time;
@@ -46,8 +42,11 @@ module {
 
   public type State =                 MigrationTypes.State;
   public type Args =                  MigrationTypes.Args;
+  public type InitArgs =              MigrationTypes.Args;
+  public type InitArgList =           MigrationTypes.ArgList;
   public func initialState() : State {#v0_0_0(#data)};
   public let currentStateVersion = #v0_1_0(#id);
+  public let Migration = MigrationLib;
 
   public let init = Migration.migrate;
 
@@ -68,21 +67,71 @@ module {
     #Map: [(Text, Value)];
   };
 
+  public type ClassPlus = ClassPlusLib.ClassPlus<
+    TimerTool, 
+    State,
+    InitArgs,
+    Environment>;
 
-  public class TimerTool(stored: ?State, canister: Principal, environment: Environment){
+  public func ClassPlusGetter(item: ?ClassPlus) : () -> TimerTool {
+    ClassPlusLib.ClassPlusGetter<TimerTool, State, InitArgs, Environment>(item);
+  };
+
+  public func Init<system>(config : {
+      manager: ClassPlusLib.ClassPlusInitializationManager;
+      initialState: State;
+      args : ?InitArgList;
+      pullEnvironment : ?(() -> Environment);
+      onInitialize: ?(TimerTool -> async*());
+      onStorageChange : ((State) ->())
+    }) :()-> TimerTool{
+
+      D.print("TimerTool Init");
+      switch(config.pullEnvironment){
+        case(?val) {
+          D.print("pull environment has value");
+         
+        };
+        case(null) {
+          D.print("pull environment is null");
+        };
+      };  
+      ClassPlusLib.ClassPlus<system,
+        TimerTool, 
+        State,
+        InitArgList,
+        Environment>({config with constructor = TimerTool}).get;
+    };
+
+
+  public class TimerTool(stored: ?State, caller: Principal, canister: Principal, args: ?InitArgList, _environment: ?Environment, storageChanged: (State) -> ()){
+
+    public let debug_channel = {
+      var announce = true;
+      var cycles = true;
+    };
+
+    D.print("TimerTool created by " # Principal.toText(caller) # " for canister " # Principal.toText(canister) # " with args " # debug_show(args) # " and environment " # debug_show(switch(_environment){ case(null) "null"; case(?val) "set";}));
+
+    public let environment : Environment = switch(_environment){
+      case(?val) val;
+      case(null) D.trap("No Environment Set");
+    };
 
       /// Initializes the ledger state with either a new state or a given state for migration. 
       /// This setup process involves internal data migration routines.
       var state : CurrentState = switch(stored){
         case(null) {
-          let #v0_1_0(#data(foundState)) = init(initialState(),currentStateVersion, null, canister);
+          let #v0_1_0(#data(foundState)) = init(initialState(),currentStateVersion, args, caller, canister);
           foundState;
         };
         case(?val) {
-          let #v0_1_0(#data(foundState)) = init(val, currentStateVersion, null, canister);
+          let #v0_1_0(#data(foundState)) = init(val, currentStateVersion, args, caller, canister);
           foundState;
         };
       };
+
+      storageChanged(#v0_1_0(#data(state)));
 
       private let executionListeners = Map.new<Text, ExecutionItem>();
 
@@ -105,6 +154,7 @@ module {
 
       public func setActionSync<system>(time: Time, action: ActionRequest) : ActionId {
         ensureInit<system>();
+        debug if (debug_channel.announce) D.print("setting action sync " # debug_show(action));
         let actionId = {time : Time = time; id = state.nextActionId} : ActionId;
         addAction(actionId, {action with 
           aSync = null;
@@ -116,6 +166,7 @@ module {
 
       public func setActionASync<system>(time: Time, action: ActionRequest, timeout: Nat) : ActionId {
         ensureInit<system>();
+        debug if (debug_channel.announce) D.print("setting action async " # debug_show(action));
         let actionId = {time : Time = time; id = state.nextActionId} : ActionId;
         addAction(actionId, {action with 
           aSync = ?timeout;
@@ -613,8 +664,9 @@ module {
       };
 
       private func ensureInit<system>() : () {
-        debug if (debug_channel.announce) D.print("ensuring init");
+        
         if(init_ == false){
+          debug if (debug_channel.announce) D.print("ensuring init becuse init_ is false");
           scheduleNextTimer<system>(); 
           ignore Timer.setTimer<system>(#nanoseconds(OneDay), scheduleCycleShare);
           init_ := true;
