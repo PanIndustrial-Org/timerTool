@@ -182,14 +182,14 @@ module {
       };
 
       private func scheduleNextTimer<system>() {
-        debug if (debug_channel.announce) D.print("scheduling next timer");
+        debug if (debug_channel.announce) D.print("TIMERTOOL  ----  scheduling next timer");
         let ?nextTime = BTree.min(state.timeTree) else{
           state.expectedExecutionTime := null;
           state.nextTimer := null;
           return;
         };
 
-         debug if (debug_channel.announce) D.print("nextTime" # debug_show(nextTime));
+         debug if (debug_channel.announce) D.print("TIMERTOOL  ----  nextTime" # debug_show(nextTime));
 
         let now = get_time();
          
@@ -199,11 +199,11 @@ module {
           0;
         };
 
-        debug if (debug_channel.announce) D.print("duration " # debug_show(duration));
+        debug if (debug_channel.announce) D.print("TIMERTOOL  ----   duration " # debug_show(duration));
 
         switch(state.nextTimer){
           case(?timerId) {
-            debug if (debug_channel.announce) D.print("cancelling timer" # debug_show(timerId));
+            debug if (debug_channel.announce) D.print("TIMERTOOL  ----  cancelling timer" # debug_show(timerId));
             Timer.cancelTimer(timerId);
           };
           case(null) {};
@@ -212,13 +212,15 @@ module {
         state.nextTimer := ?Timer.setTimer<system>(#nanoseconds(duration), executeActions);
         state.expectedExecutionTime := ?(now + duration);
 
-        debug if (debug_channel.announce) D.print("nextTimer " # debug_show(state.nextTimer));
+        debug if (debug_channel.announce) D.print("TIMERTOOL  ----   nextTimer " # debug_show(state.nextTimer));
 
-        debug if (debug_channel.announce) D.print("scheduled next timer end " # debug_show(state.nextTimer));
+        debug if (debug_channel.announce) D.print("TIMERTOOL  ----   scheduled next timer end " # debug_show(state.nextTimer));
           
       };
 
       private func scheduleCycleShare<system>() : async() {
+       
+        //set the action
         //check to see if it already exists
         switch(state.nextCycleActionId){
           case(?val){
@@ -334,16 +336,17 @@ module {
       private func executeActions<system>() : async () {
 
         if(state.timerLock != null){
-          debug if (debug_channel.announce) D.print("timer locked");
+          debug if (debug_channel.announce) D.print("TimerTool   --- timer locked");
           return;
         };
 
-        debug if (debug_channel.announce) D.print("executing actions");
+        debug if (debug_channel.announce) D.print("TimerTool   --- executing actions");
         let now = get_time();
         
         state.timerLock := ?now;
 
         let ?minAction = BTree.min(state.timeTree) else {
+          debug if (debug_channel.announce) D.print("TimerTool   ---   minAction is null"); 
           //execute actions was run but there are no actions to execute
           state.expectedExecutionTime := null;
           state.lastExecutionTime := get_time();
@@ -352,19 +355,26 @@ module {
           return;
         };
 
-        debug if (debug_channel.announce) D.print("minAction" # debug_show(minAction));
+        debug if (debug_channel.announce) D.print("TimerTool   ---   minAction" # debug_show(minAction));
 
         var actionsToExecute = BTree.scanLimit<ActionId,Action>(state.timeTree, ActionIdCompare, minAction.0, {
           time = now;
           id = state.nextActionId;
         },  #fwd, state.maxExecutions);
 
-        debug if (debug_channel.announce) D.print("actionsToExecute" # debug_show(Iter.toArray(actionsToExecute.results.vals())));
+        debug if (debug_channel.announce) D.print("TimerTool   ---  actionsToExecute" # debug_show(Iter.toArray(actionsToExecute.results.vals())));
 
         let processed = Buffer.Buffer<(ActionId,Action)>(actionsToExecute.results.size());
 
         label proc for(thisAction in actionsToExecute.results.vals()){
           debug if (debug_channel.announce) D.print("thisAction" # debug_show(thisAction));
+
+          if(thisAction.1.actionType == "icrc85:ovs:shareaction:timertool"){
+            ignore shareCycles2<system>();
+            removeAction(thisAction.0);
+            processed.add(thisAction);
+            continue proc;
+          };
 
           let executionHandler = switch(Map.get(executionListeners, Map.thash, thisAction.1.actionType)){
             case(?val) val;
@@ -378,12 +388,7 @@ module {
 
           debug if (debug_channel.announce) D.print("have execution handler" # debug_show(thisAction));
 
-          if(thisAction.1.actionType == "icrc85:ovs:shareaction:timertool"){
-            ignore shareCycles2<system>();
-            removeAction(thisAction.0);
-            processed.add(thisAction);
-            continue proc;
-          };
+          
 
           switch(executionHandler){
             case(#Sync(handler)){
